@@ -1,0 +1,440 @@
+---
+title: 'Changed evaluation of NBA performance: quantifying for subjective perception '
+author: "Wayne Wang, Ziqing Yuan, Peter, Angela Zhu, Jiayu Zhou"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+## you can edit this code chunk to change defaults for this file (ex: show all code, only show output, don't show warning etc)
+# update defaults with the gear icon on the right
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r}
+# make sure you add any packages you'll need in this file here (otherwise it won't knit)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+nba18=read.csv("/Users/wayne/Desktop/NBA/nba18.csv")
+nba19=read.csv("/Users/wayne/Desktop/NBA/nba19.csv")
+nba19r = read.csv("/Users/wayne/Desktop/NBA/nba19r.csv")
+nba18r = read.csv("/Users/wayne/Desktop/NBA/nba18r.csv")
+```
+
+### Introduction
+
+  * Based on the observable tendency that the NBA is progressing to prefer more "spatial" players, which means those who can stretch the space on court open by shooting threes from the outside and charging the post area, the performance rating of a player might have changed. We want, as a group, look at different methods and metrics to evaluate a player's peformance, and then compare it to the "subjective" variable--salary. Because salary is defined based largely based on the perception of the General Managers in the NBA, it reflects more how people subjectively recognized a player's performance.
+  * variables: We will be looking at multiple variables, specifically some are the reb and tpm variables for they somehow suggests the "Spatial Ability". We also incooprated data from official sites to add the offensive rebound, defensive rebound, and turnovers since they are needed in the official metric we will be using later.
+  * hypothesis/study questions: Do the PER works in predicting salary? If not, how to refine it to better reflect according to the subjective perception of performance(salary)? 
+  * The reason that we have emphasis on mean of the variables in the metric is that we want to reflect the dynamic relationship between the variables and the average performance of other athletes who could step on the court as much as possible and to bring some impact. Also, because PER is a very complex formula, we will borrow the accepted formula for calculating PER, and compare it to the results we have from our own formula.
+
+### Exploratory Data Analysis/ Description of Data
+  * In the project, all group members try to find a creative way of evaluating performance based on such trend of "Spatial Ability", which leads to some of the plots in this section.
+
+### Individual Plot:
+#### Evaluation of Performance from a glance made by Peter Liu:
+  
+  * There are multiple ways of evaluating performance in the NBA. The most straightforward way is found by Peter to evaluate the individual performance regardless of the overall performance in the NBA, which is by adding the efficient variables accordingly for visualization. 
+  * For season 2018:
+```{r}
+ggplot(nba18)+geom_histogram(aes(x=pts+reb+ast+stl+blk-fga+fgm-fta+ftm,y=..density..))+
+  ggtitle("Plot of individual performance distribution in 2018") +
+  xlab("IndPerR") +
+  ylab("density")
+```
+  * For season 2019:
+```{r}
+ggplot(nba19)+geom_histogram(aes(x=pts+reb+ast+stl+blk-fga+fgm-fta+ftm,y=..density..))+
+  ggtitle("Plot of individual performance distribution in 2019") +
+  xlab("IndPerR") +
+  ylab("density")
+```
+  
+  * As the plot suggests, the individual performance, if we neglect the overall performance, tends to be skewed to the right. This is possibily due to the high performance given by the star players in the leauge. 
+
+#### Metric created by Wayne Wang:
+  
+  * The crude metric is straightforwardly taking the reb and tpm variable into consideration for they represent the ability to get inside the paint for rebound and outside the three point line for long range shots. However, that will presumably put up some players who attended only a few games but have high performance in both variables.Hence we need the attendance percentage to minimize such effect. To obtain the actual attendance percentage，I divided the gp factor by the number 82(games in a season). To make tpm and reb more suggestive based on the average performance, I need the mean value for both and divide the tpm and reb by their according mean values.
+```{r}
+# gp in two dataset
+gp18=select(nba18, gp)
+gp19=select(nba19, gp)
+# reb in two dataset 
+reb18=select(nba18, reb)
+reb19=select(nba19, reb)
+# tpm in two dataset
+tpm18=select(nba18, tpm)
+tpm19=select(nba19, tpm)
+# salary in two dataset
+sal18=select(nba18, salary)
+sal19=select(nba19, salary)
+# atd is the percentage of attendance to game in a season
+atd18=gp18/82
+atd19=gp19/82
+# mr and mt are the mean value of reb and tpm variable
+mr18=mean(reb18$reb)
+mr19=mean(reb19$reb)
+mt18=mean(tpm18$tpm)
+mt19=mean(tpm19$tpm)
+# min in two dataset
+min18=select(nba18, min)
+min19=select(nba19, min)
+# mean value of min variable in two dataset
+avmin18=mean(nba18$min)
+avmin19=mean(nba19$min)
+# min of a player/average min of the dataset
+minp18=min18/avmin18
+minp19=min19/avmin19
+```
+  
+  * Hence we have nperf18 and nperf19 as the following:
+
+$nperf18=((((reb18)/mr18)+((tpm18)/mt18))*(atd18*minp18)$
+
+$nperf19=((((reb19)/mr19)+((tpm19)/mt19))*(atd19*minp19)$
+  
+  * In the metric, reb18 and reb19 are selected values of rebound variable from NBA 2018 and NBA 2019 season, whereas tpm18 and tpm19 are the tpms from two data sets respectively. As for mr18/19 and mt18/19 in the metric, they are the mean value of reb/tpm in the corresponding season for all players. This part takes the reb ratio of a given player as compared to the average of the league and added with the tpm ratio of a given player as compared to the average of the league. For the second part, the atd18 and atd19 stands for the attendance rate that I found. It takes the gp(game played) variable from each season and is divided by 82, which is the total number of games in one season. The minp18 and minp19 are the ratios of the min variable divided by the average mins of each season. It takes, similarly, the comparative minutes played by an athlete to the average minute that the players play in that season.
+
+```{r}
+nperf18=(((reb18)/mr18)+((tpm18)/mt18))*(atd18*minp18)
+nperf19=(((reb19)/mr19)+((tpm19)/mt19))*(atd19*minp19)
+# joining nperf and salary as dataset
+comp18=data.frame(nperf18, sal18)
+comp19=data.frame(nperf19, sal19)
+ggplot(comp19, aes(x=reb, y=salary))+geom_point(colour=alpha("red", 0.5))+geom_smooth(method = "lm", se=F)+
+  ggtitle("Plot of Spatial Impact and Salary in 2019 by Wayne Wang") +
+  xlab("nperf19") +
+  ylab("salary 19")
+```
+
+```{r}
+ggplot(comp18, aes(x=reb, y=salary))+geom_point(colour=alpha("blue", 0.5))+geom_smooth(method = "lm", se=F)+
+  ggtitle("Plot of Spatial Impact and Salary in 2018 by Wayne Wang") +
+  xlab("nperf18") +
+  ylab("salary 18")
+```
+  
+  * As the plots suggests, there seems to be a fair correlation between the comparative performance in tpm and reb with the salary the corresponding player earns.
+  * If we take the correlation of both seasons:
+  * For season 2018:
+```{r}
+cor(comp18$reb, comp18$salary)
+```
+  * For season 2019:
+```{r}
+# Remove all the NA values in the dataset is the first step:
+comp19=subset(comp19, (!is.na(comp19[,1]) & (!is.na(comp19[,2]))))
+cor(comp19$reb, comp19$salary)
+```
+
+  * Regression line testing:
+  -H0: result is due to chance and the regression line does not work in prediction
+  -Ha: result is not due to chance and the regression line works in prediction
+  * For season 2018:
+```{r}
+summary(lm(comp18$salary~comp18$reb, comp18))
+```
+
+  * P-value for season 2018 is extremely small and close to 0.
+  * For season 2019:
+```{r}
+summary(lm(comp19$salary~comp19$reb, comp19))
+```
+  * P-value for season 2019 is also extremely small and close to 0.
+  * Reject the null hypothesis in both season, result is not due to chance and the regression line works.
+  * As a conclusion, there seems to be a fair correlation between my own performance metric and the salary variable. It also works well in prediction.
+
+#### Analysis of height, weight, and free-throw percentage made by Ziqing Yuan:
+  
+  * I speculate that there is certain correlation between a player’s weight and height and his shooting capability. Height may affect a player’s starting point of shooting, thus exerts some influence on the shooting accuracy. However, from the data it can be seen that the heights of NBA players are roughly between 75 and 85 inches with few exceptions.
+```{r}
+ggplot(nba19)+geom_histogram(aes(x=nba19$height,y=..density..))
+```
+  
+  * The small variation within the group’s heights may not account for the difference in shooting ability, so some other factors may have greater influence. Intuitively, weight may affect muscle strength, the coordination capability of body, and thus the accuracy and distance of shootings. As many of the throws involve jumping, which may be negatively affected by the drag of weight/gravity, and require only moderate muscle strength, I deduct that there is a negative correlation between weight and shooting accuracy.
+#When considering the dependent variable that is used as the indicator of shooting ability, I choose free throw percentage as the data to be analyzed. Free throw is the only shot type that is at the same difficulty level for every basketball player. It is relatively free of other influence on the field such as defense and distractions, making it a best candidate for measuring shooting capability of players.
+  
+  * In the data analysis below, I use the data of NBA players form nba19.csv. The ftp data that are not applicable are removed during the calculation.
+  
+  * I assign the players into different groups according to their weights. The intervals for weight are: <180, 180-190,190-200,200-210,210-220,220-230,230-240,240-250,>=250, with lower bound included and upper bound excluded.
+```{r}
+a=mean(filter(nba19, nba19$weight<180)$ftp,na.rm=TRUE)
+b=mean(filter(nba19, nba19$weight>=180& nba19$weight<190)$ftp,na.rm=TRUE)
+c=mean(filter(nba19, nba19$weight>=190& nba19$weight<200)$ftp,na.rm=TRUE)
+d=mean(filter(nba19, nba19$weight>=200& nba19$weight<210)$ftp,na.rm=TRUE)
+e=mean(filter(nba19, nba19$weight>=210& nba19$weight<220)$ftp,na.rm=TRUE)
+f=mean(filter(nba19, nba19$weight>=220& nba19$weight<230)$ftp,na.rm=TRUE)
+g=mean(filter(nba19, nba19$weight>=230& nba19$weight<240)$ftp,na.rm=TRUE)
+h=mean(filter(nba19, nba19$weight>=240& nba19$weight<250)$ftp,na.rm=TRUE)
+i=mean(filter(nba19, nba19$weight>=250)$ftp,na.rm=TRUE)
+weight=c(175,185,195,205,215,225,235,245,255)
+ftp=c(a,b,c,d,e,f,g,h,i)
+data=data.frame(weight,ftp)
+data
+```
+
+```{r}
+ggplot(data,aes(x=data$weight,y=data$ftp))+geom_point()+geom_smooth(method=lm,se=FALSE)
+```
+
+  * At first sight, there indeed seems to be a negative correlation between the two variables. As the average weight of the players increases, there is a decreasing trend in corresponding average ftp. We then go on to calculate the correlation coefficient.
+```{r}
+cor(weight,ftp)
+```
+  
+  * Next, I calculate the significance of such a correlation by using both methods
+```{r}
+lm.out=lm(weight~ftp)
+summary(lm.out)
+```
+  
+  * Alternative method:
+```{r}
+SE= sqrt(1-0.89^2)*sd(data$ftp)/sqrt(7)/sd(data$weight)
+slope=0.89*sd(data$ftp)/sd(data$weight)
+1-pnorm(slope/SE)
+```
+  
+  * From the statistics, we can see that there is a very strong negative correlation(-0.89) between the player’s weight and his free throw percentage, i.e., his shooting capability. Using the summary statistics, it can be seen that the p-value for the slope of the regression line is nealy 0. So the correlation between height and shooting capability is real, and could not be explained by chance.
+
+#### Eastern and Western Conference with relation to salary by Jiayu Zhou:
+  * I compare the salaries between the Eastern and Western conferences in 2018 and 2019. I did two-sample z test and find no significant difference in two conferences (P=0.365 in 2018, P=0.402 in 2019). However, the average salaries in 2018 (5,787,844$) is lower than that in 2019 (7,163,078$).
+  * First, for season 2018:
+```{r}
+east=filter(nba18,team=="MIL"|team =="BOS"|team =="MIA"|team =="TOR"|team =="PHI"|team =="IND"|team =="BRK"|team =="ORL"|team =="DET"|team =="CHO"|team =="CHI"|team =="WAS"|team =="CLE"|team =="ATL"|team =="NYK")
+west=filter(nba18,team=="LAL"|team =="DAL"|team =="DEN"|team =="LAC"|team =="HOU"|team =="UTA"|team =="PHO"|team =="MIN"|team =="OKC"|team =="SAS"|team =="POR"|team =="SAC"|team =="MEM"|team =="NOP"|team =="GSW")
+#not used
+new18=rbind(mutate(east,conference="eastern"),mutate(west,conference="western"))
+```
+  
+  * Average salary overall:
+```{r}
+avg_east=mean(east$salary)
+avg_west=mean(west$salary)
+#average salary overall:
+mean(nba18$salary)
+```
+  
+  * two sample z test, the difference between two conferences:
+```{r}
+#SE average for east
+SDeast=sd(east$salary)*sqrt(271/272)
+SEeast=SDeast/sqrt(272)
+#SE average for west
+SDwest=sd(west$salary)*sqrt(262/263)
+SEwest=SDwest/sqrt(263)
+SEdiff=sqrt(SEeast^2+SEwest^2)
+z = (avg_east-avg_west)/SEdiff
+#p-value: 36.5%
+pnorm(z)
+```
+  
+  * conclusion: no significant difference between the average salaries in two conferences in 2018.
+  * Incooperate season 2019 for two sample z test for difference:
+```{r}
+E19=filter(nba19,team=="Milwaukee Bucks"|team =="Boston Celtics"|team =="Miami Heat"|team =="Toronto Raptors"|team =="Philadelphia 76ers"|team =="Indiana Pacers"|team =="Brooklyn Nets"|team =="Orlando Magic"|team =="Detroit Pistons"|team =="Charlotte Hornets"|team =="Chicago Bulls"|team =="Washington Wizards"|team =="Cleveland Cavaliers"|team =="Atlanta Hawks"|team =="New York Knicks")
+W19=filter(nba19,team=="Los Angeles Lakers"|team =="Dallas Mavericks"|team =="Denver Nuggets"|team =="Los Angeles Clippers"|team =="Houston Rockets"|team =="Utah Jazz"|team =="Phoenix Suns"|team =="Minnesota Timberwolves"|team =="Oklahoma City Thunder"|team =="San Antonio Spurs"|team =="Portland Trail Blazers"|team =="Sacramento Kings"|team =="Memphis Grizzlies"|team =="New Orleans Pelicans"|team =="Golden State Worriors")
+new19=rbind(mutate(E19,conference="eastern"),mutate(W19,conference="western"))
+```
+  * p value is:
+```{r}
+avg_east19=mean(E19$salary)
+avg_west19=mean(W19$salary)
+#SE average for east
+SDeast19=sd(E19$salary)*sqrt(233/234)
+SEeast19=SDeast19/sqrt(234)
+#SE average for west
+SDwest19=sd(W19$salary)*sqrt(220/221)
+SEwest19=SDwest19/sqrt(221)
+SEdiff19=sqrt(SEeast19^2+SEwest19^2)
+z19 = (avg_east19-avg_west19)/SEdiff19
+#p-value: 0.4020703
+1-pnorm(z19)
+```
+  * conclusion: no significant difference between the average salaries in two conferences in 2019.
+
+#### The following metric is found from Bleacher Report for evaluating PER by Angela:
+```{r}
+nba19per = mutate(nba19r, PER = (fgm * 85.910
+                                 + stl * 53.897
+                                 + tpm * 51.757
+                                 + ftm * 46.845
+                                 + blk * 39.190
+                                 + orb * 39.190
+                                 + ast * 34.677
+                                 + drb * 14.707
+                                 - (fta-ftm) * 20.091
+                                 - (fga-fgm) * 39.190
+                                 - tov * 53.897)*(1 / min))
+nba18per = mutate(nba18r, PER = (fgm * 85.910
+                                + stl * 53.897
+                                + tpm * 51.757
+                                + ftm * 46.845
+                                + blk * 39.190
+                                + orb * 39.190
+                                + ast * 34.677
+                                + drb * 14.707
+                                - (fta-ftm) * 20.091
+                                - (fga-fgm) * 39.190
+                                - tov * 53.897)*(1 / min))
+ggplot(nba19per, aes(x=PER, y=salary)) + geom_point()+
+  ggtitle("Plot of Official PER in 2019 season by Angela") +
+  xlab("PER") +
+  ylab("salary")
+```
+
+```{r}
+ggplot(nba18per, aes(x=PER, y=salary)) + geom_point()+
+  ggtitle("Plot of Official PER in 2018 season by Angela") +
+  xlab("PER") +
+  ylab("salary")
+```
+ 
+### Group Exploration:
+#### Topic 1:
+  * As the plots by Angela suggest, there seem to be an existent, but weak, correlation between the accepted PER and the salary variable.
+  * This situation conflicts with the presumption of PER is the by far best method in hand for predicting performance of players, since it should correlate with the salary of players for the fact that players with better performance(PER) should earn better salaries.
+  * We need to adjust the PER formula to better reflect the overall performance of a player comparing to all the other athletes in the league, thus try to correlate with the salary they earn.
+
+#### Topic 2:
+  * Is there any method other than PER we can use to evaluate the performance of a player? How does it work?
+
+#### The refined version PER for topic 1: Reflective PER for salary
+
+  * We try to refine the PER formula by dividing all the variables in the formula by their corresponding mean values, as an attempt to show the relative performance of the players comparing to the average of the league. By doing so, we can see the relative performance better, not just simply the distinct performance by any player.
+  * For season 2019:
+```{r}
+##Taking out all the NA values for calculation:
+per19=data.frame(nba19r, select(nba19per, PER))
+per18=data.frame(nba18r, select(nba18per, PER))
+correct19=subset(per19, (!is.na(nba19r[10])))
+correct18=subset(per18, (!is.na(nba18r[10])))
+newnba19per = mutate(nba19r, PER = (fgm * 85.910/ mean(correct19$fgm)
+                                 + stl * 53.897/ mean(correct19$stl)
+                                 + tpm * 51.757/ mean(correct19$tpm)
+                                 + ftm * 46.845/ mean(correct19$ftm)
+                                 + blk * 39.190/ mean(correct19$blk)
+                                 + orb * 39.190/ mean(correct19$orb)
+                                 + drb * 14.707/mean(correct19$drb)
+                                 + ast * 34.677/ mean(correct19$ast)
+                                 - (fta-ftm)
+                                 - (fga-fgm)
+                                 - tov) * (min /mean(correct19$min)))
+
+newnba18per = mutate(nba18r, PER = (fgm * 85.910/mean(correct18$fgm)
+                                + stl * 53.897/mean(correct18$stl)
+                                + tpm * 51.757/mean(correct18$tpm)
+                                + ftm * 46.845/mean(correct18$ftm)
+                                + blk * 39.190/mean(correct18$blk)
+                                + orb * 39.190/mean(correct18$orb)
+                                + ast * 34.677/mean(correct18$ast)
+                                + drb * 14.707/mean(correct18$drb)
+                                - (fta-ftm)
+                                - (fga-fgm)
+                                - tov)*(min/ mean(correct18$min)))
+
+per19=data.frame(nba19r, select(newnba19per, PER))
+per18=data.frame(nba18r, select(newnba18per, PER))
+correct19=subset(per19, (!is.na(nba19r[10])))
+correct18=subset(per18, (!is.na(nba18r[10])))
+ggplot(newnba19per, aes(x=PER, y=salary)) + geom_point()+ geom_smooth(method = "lm", se=F) +
+    ggtitle("Plot of Refined PER in 2019 season") +
+  xlab("New PER") +
+  ylab("salary")+
+  scale_y_continuous(limits = c(0, 4e+07), breaks = seq(0, 4e+07, by = 1e+07))
+```
+  
+  * For season 2018:
+```{r}
+ggplot(newnba18per, aes(x=PER, y=salary)) + geom_point()+ geom_smooth(method = "lm", se=F) +
+    ggtitle("Plot of Refined PER in 2018 season") +
+  xlab("New PER") +
+  ylab("salary")
+```
+  * Analysis of refined PER in the Data Analysis section.
+  
+#### Exploration for topic 2: Offensive Ratings
+  * "offensive ratings offer a tempo-free statistical method for comparing teams on an absolute per-possession basis that removes the variable of time from statistics. Under this system, teams can more easily be compared based on the efficiency of their offense."
+The offensive ratings focus merely on the offensive. Possessions are calculated as field goals attempted - offensive rebounds + turnovers + (0.4* free throws attempted), since possessions only end in three ways. Offensive efficiency number above 1 is considered efficient. 
+  * possessions:
+   `fga-orb+tov+(0.4*fta)`
+  * efficiency: 
+   `pts/possessions`
+   * For season 2018, correlation coefficient between offensive efficiency and salary is:
+```{r}
+nba18r_1=subset(nba18r, (!is.na(nba18r[12])) & (!is.na(nba18r[6])))
+nba18r_1=mutate(nba18r_1,possessions=fga-orb+tov+(0.4*fta))
+nba18r_2=mutate(nba18r_1,oe=pts/possessions)
+
+nba19r_1=mutate(nba19r,possessions=fga-orb+tov+(0.4*fta))
+nba19r_1=mutate(nba19r_1,oe=pts/possessions)
+nba19r_2=mutate(nba19r_1,oe=pts/possessions)
+row_sub = apply(nba18r_2, 1, function(row) all(row !=0 ))
+nba18r_3=nba18r_2[row_sub,]
+cor(nba18r_3$oe,nba18r_3$salary, use = "complete.obs")
+```
+  
+  * For season 2019, correlation coefficient between offensive efficiency and salary is:
+```{r}
+row_sub = apply(nba19r_2, 1, function(row) all(row !=0 ))
+nba19r_3=nba19r_2[row_sub,]
+cor(nba19r_3$oe,nba19r_3$salary, use = "complete.obs")
+```
+
+  * Now we can use regression line test to check:
+  * H0: result is due to chance. Correlation does not predict salary.
+  * Ha: result is not due to chance. Correlation is predictive for salary.
+  * For season 2018:
+```{r}
+summary(lm(nba18r_3$salary~nba18r_3$oe, nba18r_3))
+```
+  
+  * P Value is big enough, we fail to reject the null hypothesis at 95% confidence level that the result is due to chance, the correlation for 2018 season is not predictive to salary.
+  * For season 2019:
+```{r}
+summary(lm(nba19r_3$salary~nba19r_3$oe, nba19r_3))
+```
+  * P Value is big enough, we fail to reject the null hypothesis at 95% confidence level that the result is due to chance, the correlation for 2019 season is not predictive to salary.
+
+  * Conclusion: the offensive efficiency we explored is not predictive with accordance to salary as well. We then need to test if the rather strong correlation between our own refined PER and salary is true.
+  
+### Data Analysis
+#### Hypothesis testing of the regression line
+
+  * Null hypothesis: the positive slope of the regression line is due to chance, there is no correlation between PER and the salary.
+  * Alternative hypothesis: the positive slope of the regression line is not due to chance, there is correlation between PER and the salary.
+  * Use of lm function to find out p-value:
+  * for season 2018
+
+```{r}
+summary(lm(correct18$PER~correct18$salary, correct18))
+```
+
+  * for season 2019
+```{r}
+summary(lm(correct19$PER~correct19$salary, correct19))
+```
+
+  * From the statistics we can see that the p-value for such a positive slope is nearly zero. Thus, we reject the null hypothesis, the positive slope cannot be explained by chance, the correlation between refined PER and salary is real.
+
+### Conclusion
+  * Our question of interest is how the traditional method of evaluating a player's performance nowadays is changed due to the emerging trend of "Spatial Ability", which means those who can shoot long range shots and grab rebounds from within.
+  * During the EDA stage, we explored different ways of measuring a player's performance and even from a greater scale, the East and West regional difference by meshing the variables to generate a metric. 
+  * We then try to use the traditional measure of performance, PER, to compare the metric to  the salary that players receive since salary is a very subjective and indicative measurement of a player's ability. However, a problem occured. Although we have found some correlation in the individual EDA stage, the traditional PER is not reflective of salary.we found out that the PER, the accepted method of evaluating a player's performance, has extremely weak correlation with salary. How to make the PER more reflective of the salary is our goal. We try to not change the weight of the statistics, but rather divide the variables by their corresponding mean values, which is an inspiration we come up with from our own metrics in the EDA stage. As it turns out, the new formula is more reflective of the salary variable.
+  * We then try to see if any other approved measurements are also not reflective enough for "subjective perception"(salary). We use another popular formula of "offensive efficiency" to test. The results are similar--it does not work well in predicting the salary variable.
+  * To test the effectiveness of the new PER formula, we then conducted regression line testing. We set the Null Hypothesis as the result is due to chance and the formula does not work well in prediction of the salary. The Alternative Hypothesis is that the result is not due to chance and the formula works great in predicting the salary from the new PER. The p-value is very small and leads to the conclusion that we can reject the null hypothesis that the result is due to chance. The new formula is effective in prediction of the salary, hence leading to a resolution of the problem--we can better predict the subjective perception of the player's performance using formula we have. Instead of numerating all the performance alone, we need also to do a "compare and contrast" to show the player's performance as relative to the others in the NBA. Through this approach, we can better reflect the subjective sensation of high-performance in the changed NBA environment by using a statistical method.
+
+### Reference
+official PER formula: https://bleacherreport.com/articles/113144-cracking-the-code-how-to-calculate-hollingers-per-without-all-the-mess
+official offensive efficieny formula:
+https://www.sportsrec.com/how-math-used-basketball-4897212.html
